@@ -92,7 +92,7 @@ class CallbackModule(CallbackBase):
         lines = text.splitlines();
         for line in lines:
             line = spacing + line;
-            output = output + line + "\n"
+            output = output + line + u'\u000D'
 
         return output
 
