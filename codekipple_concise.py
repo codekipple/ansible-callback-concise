@@ -177,12 +177,12 @@ class CallbackModule(CallbackBase):
         taskName = "%s" % result._task_fields['name']
         output_task = False;
 
+        if not taskName:
+            taskName = result._task_fields['action']
+
         if self.current_task != taskName:
             self.current_task = taskName
             output_task = True
-
-        if not taskName:
-            taskName = result._task_fields['action']
 
         skipped = stringc('(skipped)', 'bright yellow'); # should use C.COLOR_SKIP in future
         dot = stringc('.', 'bright yellow'); # should use C.COLOR_SKIP in future
