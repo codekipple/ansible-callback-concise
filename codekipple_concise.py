@@ -113,7 +113,7 @@ class CallbackModule(CallbackBase):
         cross = stringc(u'\u00D7', C.COLOR_ERROR);
         host = "%s" % result._host
         taskName = "%s" % result._task_fields['name']
-        failedText = stringc("(failed)", C.COLOR_ERROR)
+        failedText = stringc("[failed]", C.COLOR_ERROR)
 
         if not taskName:
             taskName = result._task_fields['action']
@@ -190,7 +190,7 @@ class CallbackModule(CallbackBase):
             self.current_task = taskName
             output_task = True
 
-        skipped = stringc('(skipped)', 'bright yellow'); # should use C.COLOR_SKIP in future
+        skipped = stringc('[skipped]', 'bright yellow'); # should use C.COLOR_SKIP in future
         dot = stringc('.', 'bright yellow'); # should use C.COLOR_SKIP in future
 
         if output_task:
