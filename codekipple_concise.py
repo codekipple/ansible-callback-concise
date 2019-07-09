@@ -31,7 +31,7 @@ class CallbackModule(CallbackBase):
     CALLBACK_NAME = 'codekipple_concise'
     current_role = ''
     current_task = ''
-
+    carriage_return = u'\u000D'
 
     def _dump_results(self, result, indent=None, sort_keys=True, keep_invocation=False):
         if result.get('_ansible_no_log', False):
@@ -92,7 +92,7 @@ class CallbackModule(CallbackBase):
         lines = text.splitlines();
         for line in lines:
             line = spacing + line;
-            output = output + line + u'\u000D'
+            output = output + line + self.carriage_return
 
         return output
 
@@ -134,8 +134,7 @@ class CallbackModule(CallbackBase):
             self._display.display("")
 
     def v2_runner_on_ok(self, result):
-        self._clean_results(result._result, result._task.action)
-
+        delegated_vars = result._result.get('_ansible_delegated_vars', None)
 
         if result._result.get('changed', False):
             color = C.COLOR_CHANGED
@@ -177,6 +176,10 @@ class CallbackModule(CallbackBase):
             self._display.display(self.padd_text(taskName + ":", 1))
 
         self._display.display(self.padd_text(okTick + u'\u0020' + host, 1))
+
+        if delegated_vars:
+            self._display.display(self.padd_text("u'\u21b3' [vars] %s" % (result._host.get_name(), delegated_vars['ansible_host']), 4))
+
         self._handle_warnings(result._result)
 
     def v2_runner_on_skipped(self, result):
@@ -232,7 +235,7 @@ class CallbackModule(CallbackBase):
         for h in hosts:
             t = stats.summarize(h)
 
-            output += u"%s : %s %s %s %s %s %s %s \u000D" % (
+            output += u"%s : %s %s %s %s %s %s %s %s" % (
                 hostcolor(h, t),
                 colorize(u'ok', t['ok'], C.COLOR_OK),
                 colorize(u'changed', t['changed'], C.COLOR_CHANGED),
@@ -241,6 +244,7 @@ class CallbackModule(CallbackBase):
                 colorize(u'skipped', t['skipped'], C.COLOR_SKIP),
                 colorize(u'rescued', t['rescued'], C.COLOR_OK),
                 colorize(u'ignored', t['ignored'], C.COLOR_WARN),
+                self.carriage_return
             )
 
             self._display.display(
@@ -266,13 +270,13 @@ class CallbackModule(CallbackBase):
             for k in sorted(stats.custom.keys()):
                 if k == '_run':
                     continue
-                output += "\t%s: %s u'\u000D'" % (k, self._dump_results(stats.custom[k], indent=1).replace('\n', ''))
+                output += "\t%s: %s %s" % (k, self._dump_results(stats.custom[k], indent=1).replace('\n', ''), self.carriage_return)
 
             # print per run custom stats
             if '_run' in stats.custom:
-                output += "u'\u000D'"
-                output += "\tRUN: %s u'\u000D'" % self._dump_results(stats.custom['_run'], indent=1).replace('\n', '')
-            output += "u'\u000D'"
+                output += self.carriage_return
+                output += "\tRUN: %s %s" % (self._dump_results(stats.custom['_run'], indent=1).replace('\n', ''), self.carriage_return)
+            output += self.carriage_return
 
         table_data = [
             [output],
