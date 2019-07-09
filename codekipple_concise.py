@@ -107,8 +107,6 @@ class CallbackModule(CallbackBase):
 
     def v2_runner_on_failed(self, result, ignore_errors=False):
         delegated_vars = result._result.get('_ansible_delegated_vars', None)
-        self._handle_exception(result._result)
-        self._handle_warnings(result._result)
 
         cross = stringc(u'\u00D7', C.COLOR_ERROR);
         host = "%s" % result._host
@@ -127,6 +125,9 @@ class CallbackModule(CallbackBase):
 
         self._display.display(self.padd_text(u'\u21b3' + " %s" % self._dump_results(result._result, indent=4), 4), C.COLOR_ERROR)
 
+        self._handle_exception(result._result)
+        self._handle_warnings(result._result)
+
         if ignore_errors:
             self._display.display("...ignoring", color=C.COLOR_SKIP)
         else:
@@ -135,7 +136,6 @@ class CallbackModule(CallbackBase):
     def v2_runner_on_ok(self, result):
         self._clean_results(result._result, result._task.action)
 
-        self._handle_warnings(result._result)
 
         if result._result.get('changed', False):
             color = C.COLOR_CHANGED
@@ -177,6 +177,7 @@ class CallbackModule(CallbackBase):
             self._display.display(self.padd_text(taskName + ":", 1))
 
         self._display.display(self.padd_text(okTick + u'\u0020' + host, 1))
+        self._handle_warnings(result._result)
 
     def v2_runner_on_skipped(self, result):
         host = "%s" % result._host
