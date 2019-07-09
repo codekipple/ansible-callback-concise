@@ -193,6 +193,14 @@ class CallbackModule(CallbackBase):
 
         self._display.display(self.padd_text(dot + " " + host + " " + skipped, 1))
 
+    def v2_playbook_on_no_hosts_remaining(self):
+        table_data = [
+            ["No more hosts left"],
+        ]
+        noHostsTable = AsciiTable(table_data)
+        self._display.display("")
+        self._display.display(noHostsTable.table, screen_only=True)
+
     def v2_playbook_on_stats(self, stats):
         output = ""
 
@@ -247,6 +255,7 @@ class CallbackModule(CallbackBase):
         ]
         statsTable = AsciiTable(table_data)
         statsTable.title = "Play Recap"
+        self._display.display("")
         self._display.display(statsTable.table, screen_only=True)
         self._display.display("")
 
