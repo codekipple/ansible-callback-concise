@@ -15,7 +15,7 @@ from ansible.module_utils._text import to_text
 from ansible.plugins.callback import CallbackBase, strip_internal_keys, module_response_deepcopy
 from ansible.parsing.yaml.dumper import AnsibleDumper
 from ansible import constants as C
-from ansible.utils.color import stringc, hostcolor
+from ansible.utils.color import stringc, hostcolor, colorize
 from pprint import pprint
 from terminaltables import AsciiTable
 
@@ -192,6 +192,63 @@ class CallbackModule(CallbackBase):
             self._display.display(self.padd_text(taskName + ":", 1))
 
         self._display.display(self.padd_text(dot + " " + host + " " + skipped, 1))
+
+    def v2_playbook_on_stats(self, stats):
+        output = ""
+
+        hosts = sorted(stats.processed.keys())
+        for h in hosts:
+            t = stats.summarize(h)
+
+            output += u"%s : %s %s %s %s %s %s %s \u000D" % (
+                hostcolor(h, t),
+                colorize(u'ok', t['ok'], C.COLOR_OK),
+                colorize(u'changed', t['changed'], C.COLOR_CHANGED),
+                colorize(u'unreachable', t['unreachable'], C.COLOR_UNREACHABLE),
+                colorize(u'failed', t['failures'], C.COLOR_ERROR),
+                colorize(u'skipped', t['skipped'], C.COLOR_SKIP),
+                colorize(u'rescued', t['rescued'], C.COLOR_OK),
+                colorize(u'ignored', t['ignored'], C.COLOR_WARN),
+            )
+
+            self._display.display(
+                u"%s : %s %s %s %s %s %s %s" % (
+                    hostcolor(h, t, False),
+                    colorize(u'ok', t['ok'], None),
+                    colorize(u'changed', t['changed'], None),
+                    colorize(u'unreachable', t['unreachable'], None),
+                    colorize(u'failed', t['failures'], None),
+                    colorize(u'skipped', t['skipped'], None),
+                    colorize(u'rescued', t['rescued'], None),
+                    colorize(u'ignored', t['ignored'], None),
+                ),
+                log_only=True
+            )
+
+
+        # print custom stats if required
+        if stats.custom and self.show_custom_stats:
+            self._display.banner("CUSTOM STATS: ")
+            # per host
+            # TODO: come up with 'pretty format'
+            for k in sorted(stats.custom.keys()):
+                if k == '_run':
+                    continue
+                output += "\t%s: %s u'\u000D'" % (k, self._dump_results(stats.custom[k], indent=1).replace('\n', ''))
+
+            # print per run custom stats
+            if '_run' in stats.custom:
+                output += "u'\u000D'"
+                output += "\tRUN: %s u'\u000D'" % self._dump_results(stats.custom['_run'], indent=1).replace('\n', '')
+            output += "u'\u000D'"
+
+        table_data = [
+            [output],
+        ]
+        statsTable = AsciiTable(table_data)
+        statsTable.title = "Play Recap"
+        self._display.display(statsTable.table, screen_only=True)
+        self._display.display("")
 
     def v2_runner_on_unreachable(self, result):
         self._display.display("%s | UNREACHABLE! => %s" % (result._host.get_name(), self._dump_results(result._result, indent=4)), color=C.COLOR_UNREACHABLE)
