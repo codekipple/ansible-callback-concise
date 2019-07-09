@@ -201,6 +201,23 @@ class CallbackModule(CallbackBase):
         self._display.display("")
         self._display.display(noHostsTable.table, screen_only=True)
 
+    def v2_playbook_on_play_start(self, play):
+        name = play.get_name().strip()
+        output = ""
+
+        if name:
+            output = name
+
+        self._play = play
+
+        table_data = [
+            [output],
+        ]
+        playStartTable = AsciiTable(table_data)
+        playStartTable.title = "Play"
+        self._display.display("")
+        self._display.display(playStartTable.table, screen_only=True)
+
     def v2_playbook_on_stats(self, stats):
         output = ""
 
