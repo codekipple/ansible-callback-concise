@@ -113,14 +113,14 @@ class CallbackModule(CallbackBase):
         cross = stringc(u'\u00D7', C.COLOR_ERROR);
         host = "%s" % result._host
         taskName = "%s" % result._task_fields['name']
-        failedText = stringc("[failed]", C.COLOR_ERROR)
 
         if not taskName:
             taskName = result._task_fields['action']
 
         self._display.display("")
         self._display.display(self.padd_text(taskName, 1))
-        self._display.display(self.padd_text(cross + u'\u0020' + host + " " + failedText, 1))
+        self._display.display(self.padd_text(cross + " " + host, 1))
+        self._display.display(self.padd_text(u'\u21b3' + " [failed]:", 4), C.COLOR_ERROR)
 
         if delegated_vars:
             self._display.display("%s" % delegated_vars['ansible_host'])
