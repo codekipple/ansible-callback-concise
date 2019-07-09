@@ -106,6 +106,7 @@ class CallbackModule(CallbackBase):
         return buf + "\n"
 
     def v2_runner_on_failed(self, result, ignore_errors=False):
+        delegated_vars = result._result.get('_ansible_delegated_vars', None)
         self._handle_exception(result._result)
         self._handle_warnings(result._result)
 
@@ -121,10 +122,15 @@ class CallbackModule(CallbackBase):
         self._display.display(self.padd_text(taskName, 1))
         self._display.display(self.padd_text(cross + u'\u0020' + host + " " + failedText, 1))
 
-        if 'module_stderr' not in result._result:
-            self._display.display(self.padd_text(u'\u21b3' + " %s" % self._command_generic_msg(result._result), 4), color=C.COLOR_ERROR)
+        if delegated_vars:
+            self._display.display("%s" % delegated_vars['ansible_host'])
+
+        self._display.display(self.padd_text(u'\u21b3' + " %s" % self._dump_results(result._result, indent=4), 4), C.COLOR_ERROR)
+
+        if ignore_errors:
+            self._display.display("...ignoring", color=C.COLOR_SKIP)
         else:
-            self._display.display(self.padd_text(u'\u21b3' + " %s" % self._dump_results(result._result, indent=4), 4), C.COLOR_ERROR)
+            self._display.display("")
 
     def v2_runner_on_ok(self, result):
         self._clean_results(result._result, result._task.action)
