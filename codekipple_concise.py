@@ -29,9 +29,9 @@ class CallbackModule(CallbackBase):
     CALLBACK_VERSION = 2.0
     CALLBACK_TYPE = 'stdout'
     CALLBACK_NAME = 'codekipple_concise'
-    current_role = ''
     current_task = ''
     carriage_return = u'\u000D'
+    check_mark = u'\u2713'
 
     def _dump_results(self, result, indent=None, sort_keys=True, keep_invocation=False):
         if result.get('_ansible_no_log', False):
@@ -143,17 +143,8 @@ class CallbackModule(CallbackBase):
             color = C.COLOR_OK
             state = 'SUCCESS'
 
-        output_role = False;
         output_task = False;
-
-        if result._task._role and self.current_role != result._task._role:
-            self.current_role = result._task._role
-            output_role = True
-
-        okTick = stringc(u'\u2713', color);
-
         taskName = "%s" % result._task_fields['name']
-        host = "%s" % result._host
 
         if not taskName:
             taskName = result._task_fields['action']
@@ -162,20 +153,16 @@ class CallbackModule(CallbackBase):
             self.current_task = taskName
             output_task = True
 
-        if output_role:
-            self._display.display("")
-            roleName = "%s" % result._task._role.get_name()
-            table_data = [
-                [u'\u0020' +"Role: " + roleName],
-            ]
-            roleTable = AsciiTable(table_data)
-            self._display.display(roleTable.table)
-
         if output_task:
             self._display.display("")
-            self._display.display(self.padd_text(taskName + ":", 1))
+            taskLine = taskName
 
-        self._display.display(self.padd_text(okTick + u'\u0020' + host, 1))
+            if result._task._role:
+                taskLine += stringc(" [%s]" % result._task._role.get_name(), 'dark gray');
+            self._display.display(self.padd_text(taskLine, 1))
+
+        host = "%s" % result._host
+        self._display.display(self.padd_text(stringc(self.check_mark, color) + " " + host, 1))
 
         if delegated_vars:
             self._display.display(self.padd_text("u'\u21b3' [vars] %s" % (result._host.get_name(), delegated_vars['ansible_host']), 4))
@@ -185,23 +172,20 @@ class CallbackModule(CallbackBase):
     def v2_runner_on_skipped(self, result):
         host = "%s" % result._host
         taskName = "%s" % result._task_fields['name']
-        output_task = False;
 
         if not taskName:
             taskName = result._task_fields['action']
 
         if self.current_task != taskName:
             self.current_task = taskName
-            output_task = True
-
-        skipped = stringc('[skipped]', 'bright yellow'); # should use C.COLOR_SKIP in future
-        dot = stringc('.', 'bright yellow'); # should use C.COLOR_SKIP in future
-
-        if output_task:
             self._display.display("")
-            self._display.display(self.padd_text(taskName + ":", 1))
+            taskLine = taskName
 
-        self._display.display(self.padd_text(dot + " " + host + " " + skipped, 1))
+            if result._task._role:
+                taskLine += stringc(" [%s]" % result._task._role.get_name(), 'dark gray');
+            self._display.display(self.padd_text(taskLine, 1))
+
+        self._display.display(self.padd_text(stringc('-', C.COLOR_SKIP) + " " + host + " " + stringc('[skipped]', C.COLOR_SKIP), 1))
 
     def v2_playbook_on_no_hosts_remaining(self):
         table_data = [
