@@ -11,6 +11,9 @@ DOCUMENTATION = '''
 '''
 
 import yaml
+import re
+import string
+
 from ansible.module_utils._text import to_text
 from ansible.plugins.callback import CallbackBase, strip_internal_keys, module_response_deepcopy
 from ansible.parsing.yaml.dumper import AnsibleDumper
@@ -18,6 +21,37 @@ from ansible import constants as C
 from ansible.utils.color import stringc, hostcolor, colorize
 from pprint import pprint
 from terminaltables import AsciiTable
+
+# from http://stackoverflow.com/a/15423007/115478
+def should_use_block(value):
+    """Returns true if string should be in block format"""
+    for c in u"\u000a\u000d\u001c\u001d\u001e\u0085\u2028\u2029":
+        if c in value:
+            return True
+    return False
+
+def my_represent_scalar(self, tag, value, style=None):
+    """Uses block style for multi-line strings"""
+    if style is None:
+        if should_use_block(value):
+            style = '|'
+            # we care more about readable than accuracy, so...
+            # ...no trailing space
+            value = value.rstrip()
+            # ...and non-printable characters
+            value = ''.join(x for x in value if x in string.printable)
+            # ...tabs prevent blocks from expanding
+            value = value.expandtabs()
+            # ...and odd bits of whitespace
+            value = re.sub(r'[\x0b\x0c\r]', '', value)
+            # ...as does trailing space
+            value = re.sub(r' +\n', '\n', value)
+        else:
+            style = self.default_style
+    node = yaml.representer.ScalarNode(tag, value, style=style)
+    if self.alias_key is not None:
+        self.represented_objects[self.alias_key] = node
+    return node
 
 class CallbackModule(CallbackBase):
 
@@ -32,6 +66,10 @@ class CallbackModule(CallbackBase):
     current_task = ''
     carriage_return = u'\u000D'
     check_mark = u'\u2713'
+
+    def __init__(self):
+        super(CallbackModule, self).__init__()
+        yaml.representer.BaseRepresenter.represent_scalar = my_represent_scalar
 
     def _dump_results(self, result, indent=None, sort_keys=True, keep_invocation=False):
         if result.get('_ansible_no_log', False):
