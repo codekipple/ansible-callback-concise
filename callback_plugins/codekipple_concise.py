@@ -15,6 +15,7 @@ import re
 import string
 
 from ansible.module_utils._text import to_text
+from ansible.playbook.task_include import TaskInclude
 from ansible.plugins.callback import CallbackBase, strip_internal_keys, module_response_deepcopy
 from ansible.parsing.yaml.dumper import AnsibleDumper
 from ansible import constants as C
@@ -68,6 +69,10 @@ class CallbackModule(CallbackBase):
     check_mark = u'\u2713'
 
     def __init__(self):
+        self._play = None
+        self._last_task_banner = None
+        self._last_task_name = None
+        self._task_type_cache = {}
         super(CallbackModule, self).__init__()
         yaml.representer.BaseRepresenter.represent_scalar = my_represent_scalar
 
@@ -143,18 +148,74 @@ class CallbackModule(CallbackBase):
 
         return buf + "\n"
 
+    def get_task_name(self, result):
+        taskName = ''
+
+        if result._task_fields:
+            if result._task_fields and result._task_fields['name']:
+                taskName = "%s" % result._task_fields['name']
+            else:
+                taskName = result._task_fields['action']
+        else:
+            taskName = result._task
+
+        return taskName
+
+    def banner(self, msg, color=None):
+        msg = msg.strip()
+        self._display.display(u"\n%s" % (self.padd_text(msg, 1)), color=color)
+
+    def get_task_name(self, task):
+        taskName = ''
+        if (task._attributes['name'] is not None and task._attributes['name'] != ''):
+            taskName = task._attributes['name']
+        elif (task._attributes['action'] is not None and task._attributes['action'] != ''):
+            taskName = task._attributes['action']
+        else:
+            taskName = task.get_name()
+
+        if task._role:
+            taskName += stringc(" [%s]" % task._role.get_name(), 'dark gray');
+
+        return taskName
+
+    def _print_task_banner(self, task):
+        # args can be specified as no_log in several places: in the task or in
+        # the argument spec.  We can check whether the task is no_log but the
+        # argument spec can't be because that is only run on the target
+        # machine and we haven't run it thereyet at this time.
+        #
+        # So we give people a config option to affect display of the args so
+        # that they can secure this if they feel that their stdout is insecure
+        # (shoulder surfing, logging stdout straight to a file, etc).
+        args = ''
+        if not task.no_log and C.DISPLAY_ARGS_TO_STDOUT:
+            args = u', '.join(u'%s=%s' % a for a in task.args.items())
+            args = u' %s' % args
+
+        # Use cached task name
+        task_name = self._last_task_name
+        if task_name is None:
+            task_name = self.get_task_name(task)
+
+        self.banner(u"%s%s" % (task_name, args))
+        if self._display.verbosity >= 2:
+            path = task.get_path()
+            if path:
+                self._display.display(u"task path: %s" % path, color=C.COLOR_DEBUG)
+
+        self._last_task_banner = task._uuid
+
     def v2_runner_on_failed(self, result, ignore_errors=False):
         delegated_vars = result._result.get('_ansible_delegated_vars', None)
+        self._clean_results(result._result, result._task.action)
+
+        if self._last_task_banner != result._task._uuid:
+            self._print_task_banner(result._task)
 
         cross = stringc(u'\u00D7', C.COLOR_ERROR);
         host = "%s" % result._host
-        taskName = "%s" % result._task_fields['name']
 
-        if not taskName:
-            taskName = result._task_fields['action']
-
-        self._display.display("")
-        self._display.display(self.padd_text(taskName, 1))
         self._display.display(self.padd_text(cross + " " + host, 1))
         self._display.display(self.padd_text(u'\u21b3' + " [failed]:", 4), C.COLOR_ERROR)
 
@@ -174,30 +235,15 @@ class CallbackModule(CallbackBase):
     def v2_runner_on_ok(self, result):
         delegated_vars = result._result.get('_ansible_delegated_vars', None)
 
-        if result._result.get('changed', False):
+        if isinstance(result._task, TaskInclude):
+            return
+        elif result._result.get('changed', False):
             color = C.COLOR_CHANGED
-            state = 'CHANGED'
         else:
             color = C.COLOR_OK
-            state = 'SUCCESS'
 
-        output_task = False;
-        taskName = "%s" % result._task_fields['name']
-
-        if not taskName:
-            taskName = result._task_fields['action']
-
-        if self.current_task != taskName:
-            self.current_task = taskName
-            output_task = True
-
-        if output_task:
-            self._display.display("")
-            taskLine = taskName
-
-            if result._task._role:
-                taskLine += stringc(" [%s]" % result._task._role.get_name(), 'dark gray');
-            self._display.display(self.padd_text(taskLine, 1))
+        if self._last_task_banner != result._task._uuid:
+            self._print_task_banner(result._task)
 
         host = "%s" % result._host
         self._display.display(self.padd_text(stringc(self.check_mark, color) + " " + host, 1))
@@ -208,21 +254,10 @@ class CallbackModule(CallbackBase):
         self._handle_warnings(result._result)
 
     def v2_runner_on_skipped(self, result):
+        if self._last_task_banner != result._task._uuid:
+            self._print_task_banner(result._task)
+
         host = "%s" % result._host
-        taskName = "%s" % result._task_fields['name']
-
-        if not taskName:
-            taskName = result._task_fields['action']
-
-        if self.current_task != taskName:
-            self.current_task = taskName
-            self._display.display("")
-            taskLine = taskName
-
-            if result._task._role:
-                taskLine += stringc(" [%s]" % result._task._role.get_name(), 'dark gray');
-            self._display.display(self.padd_text(taskLine, 1))
-
         self._display.display(self.padd_text(stringc('-', C.COLOR_SKIP) + " " + host + " " + stringc('[skipped]', C.COLOR_SKIP), 1))
 
     def v2_playbook_on_no_hosts_remaining(self):
@@ -286,7 +321,7 @@ class CallbackModule(CallbackBase):
 
         # print custom stats if required
         if stats.custom and self.show_custom_stats:
-            self._display.banner("CUSTOM STATS: ")
+            self.banner("CUSTOM STATS: ")
             # per host
             # TODO: come up with 'pretty format'
             for k in sorted(stats.custom.keys()):
