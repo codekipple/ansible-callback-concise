@@ -217,12 +217,12 @@ class CallbackModule(CallbackBase):
         host = "%s" % result._host
 
         self._display.display(cross + " " + host, 1)
-        self._display.display(self.padd_text(u'\u21b3' + " [failed]:", 4), C.COLOR_ERROR)
+        self._display.display(self.padd_text(u'\u21b3' + " [failed]:", 2), C.COLOR_ERROR)
 
         if delegated_vars:
             self._display.display("%s" % delegated_vars['ansible_host'])
 
-        self._display.display(self.padd_text(u'\u21b3' + " %s" % self._dump_results(result._result, indent=4), 4), C.COLOR_ERROR)
+        self._display.display(self.padd_text(u'\u21b3' + " %s" % self._dump_results(result._result, indent=4), 2), C.COLOR_ERROR)
 
         self._handle_exception(result._result)
         self._handle_warnings(result._result)
@@ -245,13 +245,13 @@ class CallbackModule(CallbackBase):
         if self._last_task_banner != result._task._uuid:
             self._print_task_banner(result._task)
 
-        host = "%s" % result._host
-        self._display.display(stringc(self.check_mark, color) + " " + host, )
+        msg = "%s %s" % (stringc(self.check_mark, color), result._host.get_name())
 
         if delegated_vars:
-            self._display.display(self.padd_text("u'\u21b3' [vars] %s" % (result._host.get_name(), delegated_vars['ansible_host']), 4))
+            msg = self.padd_text(u"\n\u21b3 [vars] %s" % (delegated_vars['ansible_host']), 2)
 
         self._handle_warnings(result._result)
+        self._display.display(msg)
 
     def v2_runner_on_skipped(self, result):
         if self._last_task_banner != result._task._uuid:
@@ -357,7 +357,7 @@ class CallbackModule(CallbackBase):
             if 'warnings' in res and res['warnings']:
                 for warning in res['warnings']:
                     warningText = stringc(u'\u21b3' + " " + "[warning]: " + warning, C.COLOR_WARN)
-                    self._display.display(self.padd_text(warningText, 4))
+                    self._display.display(self.padd_text(warningText, 2))
                 del res['warnings']
             if 'deprecations' in res and res['deprecations']:
                 for warning in res['deprecations']:
