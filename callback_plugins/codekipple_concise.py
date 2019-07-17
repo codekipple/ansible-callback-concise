@@ -163,7 +163,7 @@ class CallbackModule(CallbackBase):
 
     def banner(self, msg, color=None):
         msg = msg.strip()
-        self._display.display(u"\n%s" % (self.padd_text(msg, 1)), color=color)
+        self._display.display(u"\n%s" % (msg), color=color)
 
     def get_task_name(self, task):
         taskName = ''
@@ -216,7 +216,7 @@ class CallbackModule(CallbackBase):
         cross = stringc(u'\u00D7', C.COLOR_ERROR);
         host = "%s" % result._host
 
-        self._display.display(self.padd_text(cross + " " + host, 1))
+        self._display.display(cross + " " + host, 1)
         self._display.display(self.padd_text(u'\u21b3' + " [failed]:", 4), C.COLOR_ERROR)
 
         if delegated_vars:
@@ -246,7 +246,7 @@ class CallbackModule(CallbackBase):
             self._print_task_banner(result._task)
 
         host = "%s" % result._host
-        self._display.display(self.padd_text(stringc(self.check_mark, color) + " " + host, 1))
+        self._display.display(stringc(self.check_mark, color) + " " + host, )
 
         if delegated_vars:
             self._display.display(self.padd_text("u'\u21b3' [vars] %s" % (result._host.get_name(), delegated_vars['ansible_host']), 4))
@@ -258,7 +258,7 @@ class CallbackModule(CallbackBase):
             self._print_task_banner(result._task)
 
         host = "%s" % result._host
-        self._display.display(self.padd_text(stringc('-', C.COLOR_SKIP) + " " + host + " " + stringc('[skipped]', C.COLOR_SKIP), 1))
+        self._display.display(stringc('-', C.COLOR_SKIP) + " " + host + " " + stringc('[skipped]', C.COLOR_SKIP))
 
     def v2_playbook_on_no_hosts_remaining(self):
         table_data = [
