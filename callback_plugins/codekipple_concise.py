@@ -257,8 +257,8 @@ class CallbackModule(CallbackBase):
         if self._last_task_banner != result._task._uuid:
             self._print_task_banner(result._task)
 
-        host = "%s" % result._host
-        self._display.display(stringc('-', C.COLOR_SKIP) + " " + host + " " + stringc('[skipped]', C.COLOR_SKIP))
+        msg = "%s %s" % (stringc('-', C.COLOR_SKIP), result._host)
+        self._display.display(msg)
 
     def v2_playbook_on_no_hosts_remaining(self):
         table_data = [
