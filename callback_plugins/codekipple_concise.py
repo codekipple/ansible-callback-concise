@@ -250,8 +250,8 @@ class CallbackModule(CallbackBase):
         if delegated_vars:
             msg = self.padd_text(u"\n\u21b3 [vars] %s" % (delegated_vars['ansible_host']), 2)
 
-        self._handle_warnings(result._result)
         self._display.display(msg)
+        self._handle_warnings(result._result)
 
     def v2_runner_on_skipped(self, result):
         if self._last_task_banner != result._task._uuid:
