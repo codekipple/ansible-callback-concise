@@ -67,6 +67,7 @@ class CallbackModule(CallbackBase):
     current_task = ''
     carriage_return = u'\u000D'
     check_mark = u'\u2713'
+    rightArrow = u'\u21b3'
 
     def __init__(self):
         self._play = None
@@ -217,12 +218,12 @@ class CallbackModule(CallbackBase):
         host = "%s" % result._host
 
         self._display.display(cross + " " + host, 1)
-        self._display.display(self.padd_text(u'\u21b3' + " [failed]:", 2), C.COLOR_ERROR)
+        self._display.display(self.padd_text(self.rightArrow + " [failed]:", 2), C.COLOR_ERROR)
 
         if delegated_vars:
             self._display.display("%s" % delegated_vars['ansible_host'])
 
-        self._display.display(self.padd_text(u'\u21b3' + " %s" % self._dump_results(result._result, indent=4), 2), C.COLOR_ERROR)
+        self._display.display(self.padd_text(self.rightArrow + " %s" % self._dump_results(result._result, indent=4), 2), C.COLOR_ERROR)
 
         self._handle_exception(result._result)
         self._handle_warnings(result._result)
@@ -356,7 +357,7 @@ class CallbackModule(CallbackBase):
         if C.ACTION_WARNINGS:
             if 'warnings' in res and res['warnings']:
                 for warning in res['warnings']:
-                    warningText = stringc(u'\u21b3' + " " + "[warning]: " + warning, C.COLOR_WARN)
+                    warningText = stringc(self.rightArrow + " " + "[warning]: " + warning, C.COLOR_WARN)
                     self._display.display(self.padd_text(warningText, 2))
                 del res['warnings']
             if 'deprecations' in res and res['deprecations']:
