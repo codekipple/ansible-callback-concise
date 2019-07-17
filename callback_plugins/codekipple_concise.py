@@ -68,6 +68,7 @@ class CallbackModule(CallbackBase):
     carriage_return = u'\u000D'
     check_mark = u'\u2713'
     rightArrow = u'\u21b3'
+    cross = u'\u00D7'
 
     def __init__(self):
         self._play = None
@@ -214,15 +215,14 @@ class CallbackModule(CallbackBase):
         if self._last_task_banner != result._task._uuid:
             self._print_task_banner(result._task)
 
-        cross = stringc(u'\u00D7', C.COLOR_ERROR);
-        host = "%s" % result._host
-
-        self._display.display(cross + " " + host, 1)
-        self._display.display(self.padd_text(self.rightArrow + " [failed]:", 2), C.COLOR_ERROR)
+        msg = "%s %s" % (stringc(self.cross, C.COLOR_ERROR), result._host)
 
         if delegated_vars:
-            self._display.display("%s" % delegated_vars['ansible_host'])
+            self._display.display("%s -> %s" % (msg, delegated_vars['ansible_host']))
+        else:
+            self._display.display(msg)
 
+        self._display.display(self.padd_text(stringc(u"\n%s [failed]:" % (self.rightArrow), C.COLOR_ERROR), 2))
         self._display.display(self.padd_text(self.rightArrow + " %s" % self._dump_results(result._result, indent=4), 2), C.COLOR_ERROR)
 
         self._handle_exception(result._result)
@@ -249,9 +249,10 @@ class CallbackModule(CallbackBase):
         msg = "%s %s" % (stringc(self.check_mark, color), result._host.get_name())
 
         if delegated_vars:
-            msg = self.padd_text(u"\n\u21b3 [vars] %s" % (delegated_vars['ansible_host']), 2)
+            self._display.display("%s -> %s" % (msg, delegated_vars['ansible_host']))
+        else:
+            self._display.display(msg)
 
-        self._display.display(msg)
         self._handle_warnings(result._result)
 
     def v2_runner_on_skipped(self, result):
@@ -357,8 +358,8 @@ class CallbackModule(CallbackBase):
         if C.ACTION_WARNINGS:
             if 'warnings' in res and res['warnings']:
                 for warning in res['warnings']:
-                    warningText = stringc(self.rightArrow + " " + "[warning]: " + warning, C.COLOR_WARN)
-                    self._display.display(self.padd_text(warningText, 2))
+                    msg = stringc(self.rightArrow + " " + "[warning]: " + warning, C.COLOR_WARN)
+                    self._display.display(self.padd_text(msg, 2))
                 del res['warnings']
             if 'deprecations' in res and res['deprecations']:
                 for warning in res['deprecations']:
